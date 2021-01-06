@@ -1522,7 +1522,7 @@ public class WifiWizard2 extends CordovaPlugin {
    * @param requestCode
    */
   protected void requestLocationPermission(int requestCode) {
-    cordova.requestPermission(this, requestCode, ACCESS_FINE_LOCATION);
+    // cordova.requestPermission(this, requestCode, ACCESS_FINE_LOCATION);
   }
 
   /**
