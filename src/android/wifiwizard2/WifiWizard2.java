@@ -121,6 +121,8 @@ public class WifiWizard2 extends CordovaPlugin {
   private ConnectivityManager connectivityManager;
   private ConnectivityManager.NetworkCallback networkCallback;
 
+  private Network connectedNetwork = null;
+
   // Store AP, previous, and desired wifi info
   private AP previous, desired;
 
@@ -282,6 +284,9 @@ public class WifiWizard2 extends CordovaPlugin {
     return true;
   }
 
+  public Network getConnectedNetwork() {
+    return connectedNetwork;
+  }
   /**
    * Scans networks and sends the list back on the success callback
    *
@@ -473,16 +478,21 @@ public class WifiWizard2 extends CordovaPlugin {
         networkCallback = new ConnectivityManager.NetworkCallback() {
           @Override
           public void onAvailable(Network network) {
-            Log.d(TAG, "in availble");
+            Log.d(TAG, "in available");
             Log.d(TAG, network.toString());
             connectionTime = System.currentTimeMillis();
-            connectivityManager.bindProcessToNetwork(network);
+            connectedNetwork = network;
+            // Viavi - Commenting these out because the ICP will handle routing only instrument traffic
+            // over the new network, and then we'll be able to access StrataSync and other servers
+            // via cell data --CkJ
+//            connectivityManager.bindProcessToNetwork(network);
             callbackContext.success("NETWORK_CONNECTION_COMPLETED");
           }
           @Override
           public void onLost(Network network) {
             Log.d(TAG, "in Lost");
-            connectivityManager.bindProcessToNetwork(null);
+            connectedNetwork = null;
+//            connectivityManager.bindProcessToNetwork(null);
             connectivityManager.unregisterNetworkCallback(networkCallback);
             AlertDialog.Builder alert = new AlertDialog.Builder(cordova.getActivity());
             alert.setCancelable(true);
@@ -945,7 +955,8 @@ public class WifiWizard2 extends CordovaPlugin {
       try{
         ConnectivityManager cm = (ConnectivityManager) cordova.getActivity().getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
         cm.unregisterNetworkCallback(this.networkCallback);
-        connectivityManager.bindProcessToNetwork(null);
+        connectedNetwork = null;
+//        connectivityManager.bindProcessToNetwork(null);
         callbackContext.success("true");
         return true;
       }
@@ -1818,7 +1829,8 @@ public class WifiWizard2 extends CordovaPlugin {
 
       // Lollipop OS or newer
       if ( API_VERSION >= 23 ) {
-        connectivityManager.bindProcessToNetwork(null);
+        connectedNetwork = null;
+//        connectivityManager.bindProcessToNetwork(null);
       } else if( API_VERSION >= 21 && API_VERSION < 23 ){
         connectivityManager.setProcessDefaultNetwork(null);
       }
@@ -1902,11 +1914,15 @@ public class WifiWizard2 extends CordovaPlugin {
       networkCallback = new ConnectivityManager.NetworkCallback() {
         @Override
         public void onAvailable(Network network) {
-          if( connectivityManager.bindProcessToNetwork(network) ){
-            Log.d(TAG, "bindProcessToNetwork TRUE onSuccessfulConnection");
-          } else {
-            Log.d(TAG, "bindProcessToNetwork FALSE onSuccessfulConnection");
-          }
+          connectedNetwork = network;
+          // Viavi - Commenting these out because the ICP will handle routing only instrument traffic
+          // over the new network, and then we'll be able to access StrataSync and other servers
+          // via cell data --CkJ
+//          if( connectivityManager.bindProcessToNetwork(network) ){
+//            Log.d(TAG, "bindProcessToNetwork TRUE onSuccessfulConnection");
+//          } else {
+//            Log.d(TAG, "bindProcessToNetwork FALSE onSuccessfulConnection");
+//          }
         }
       };
 
