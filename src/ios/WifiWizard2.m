@@ -68,9 +68,12 @@
                 
                 if ([ssid isEqualToString:ssidString]){
                     pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:ssidString];
-                }else{
+                } else if (error.description) {
                     pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error.description];
-                }
+                } else {
+                    // Looks like if error isn't given, and ssid does not equal requested SSID, it means it failed to join the network
+                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Unknown, but did not connect"];			
+		}
                 [self.commandDelegate sendPluginResult:pluginResult
                                             callbackId:command.callbackId];
             }];
