@@ -515,7 +515,7 @@ public class WifiWizard2 extends CordovaPlugin {
               public void onClick(DialogInterface dialog, int which) {
               }
             });
-            
+
             new android.os.Handler().postDelayed(
               new Runnable() {
                 public void run() {
@@ -564,6 +564,7 @@ public class WifiWizard2 extends CordovaPlugin {
 
           int newNetId = wifiManager.addNetwork(wifi);
           if( newNetId > -1 ){
+            getWifiNetwork();
             callbackContext.success( newNetId );
           } else {
             callbackContext.error( "ERROR_ADDING_NETWORK" );
@@ -574,6 +575,7 @@ public class WifiWizard2 extends CordovaPlugin {
           int updatedNetID = wifiManager.updateNetwork(wifi);
 
           if(updatedNetID > -1) {
+            getWifiNetwork();
             callbackContext.success( updatedNetID );
           } else {
             callbackContext.error("ERROR_UPDATING_NETWORK");
@@ -594,6 +596,34 @@ public class WifiWizard2 extends CordovaPlugin {
       callbackContext.error(e.getMessage());
       Log.d(TAG, e.getMessage());
       return false;
+    }
+  }
+
+  /**
+   * Update the connectedNetwork member variable for API versions 23 through 28
+   *
+   */
+  private void getWifiNetwork() {
+    if (API_VERSION >= 23) {
+      final NetworkRequest request =
+              new NetworkRequest.Builder()
+                      .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                      .build();
+      final ConnectivityManager connectivityManager =
+              cordova.getActivity().getApplicationContext().getSystemService(ConnectivityManager.class);
+      final NetworkCallback networkCallback = new NetworkCallback() {
+        @Override
+        public void onAvailable(Network network) {
+          connectedNetwork = network;
+        }
+
+        @Override
+        public void onLost(Network network) {
+          Log.d(TAG, "in Lost");
+          connectedNetwork = null;
+        }
+      };
+      connectivityManager.requestNetwork(request, networkCallback); // For request
     }
   }
 
