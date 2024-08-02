@@ -477,6 +477,11 @@ public class WifiWizard2 extends CordovaPlugin {
       if(API_VERSION >= 29) {
         networkCallback = new ConnectivityManager.NetworkCallback() {
           @Override
+          public void onUnavailable() {
+            Log.d(TAG, "in unavailable ");
+            callbackContext.error( "ERROR_NETWORK_UNAVAILABLE" );
+          }
+          @Override
           public void onAvailable(Network network) {
             Log.d(TAG, "in available");
             Log.d(TAG, network.toString());
