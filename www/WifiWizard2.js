@@ -15,10 +15,11 @@
 
 var WifiWizard2 = {
 
-     /**
-     * Handle iOS 14 permission issue
-     * @returns {Promise}
-     */
+    networkLost: undefined,
+    /**
+    * Handle iOS 14 permission issue
+    * @returns {Promise}
+    */
     iOSNetworkPermission: function () {
         return new Promise(function (resolve, reject) {
             cordova.exec(resolve, reject, "WifiWizard2", "iOSNetworkPermission", [])
@@ -26,43 +27,43 @@ var WifiWizard2 = {
 
     },
 
-	/**
+    /**
      * Connect to network on iOS device
-	 * @param ssid
-	 * @param ssidPassword      Password if connecting to WPA/WPA2 network (omit or use false to connect to open network)
-	 * @returns {Promise}
-	 */
-	iOSConnectNetwork: function (ssid, ssidPassword) {
+     * @param ssid
+     * @param ssidPassword      Password if connecting to WPA/WPA2 network (omit or use false to connect to open network)
+     * @returns {Promise}
+     */
+    iOSConnectNetwork: function (ssid, ssidPassword) {
 
         return new Promise(function (resolve, reject) {
-            if( ssidPassword === undefined || ! ssidPassword || ssidPassword.length < 1 ){
+            if (ssidPassword === undefined || !ssidPassword || ssidPassword.length < 1) {
                 // iOS connect open network
-	            cordova.exec(resolve, reject, "WifiWizard2", "iOSConnectOpenNetwork", [{ "Ssid": ssid }]);
+                cordova.exec(resolve, reject, "WifiWizard2", "iOSConnectOpenNetwork", [{ "Ssid": ssid }]);
 
-            } else if( ssidPassword !== undefined && ssidPassword.length > 0 && ssidPassword.length < 8 ){
+            } else if (ssidPassword !== undefined && ssidPassword.length > 0 && ssidPassword.length < 8) {
                 // iOS pass length does not meet requirements (min 8 chars for WPA/WPA2)
                 reject("WPA/WPA2 password length must be at least 8 characters in length!");
 
             } else {
                 // iOS connect to WPA/WPA2 network
-              cordova.exec(resolve, reject, "WifiWizard2", "iOSConnectNetwork", [
-                {
-                  "Ssid": ssid,
-                  "Password": ssidPassword
-                }]
-              );
+                cordova.exec(resolve, reject, "WifiWizard2", "iOSConnectNetwork", [
+                    {
+                        "Ssid": ssid,
+                        "Password": ssidPassword
+                    }]
+                );
             }
 
         });
 
     },
 
-	/**
+    /**
      * Disconnect from SSID on iOS device
-	 * @param ssid
-	 * @returns {Promise}
-	 */
-	iOSDisconnectNetwork: function (ssid) {
+     * @param ssid
+     * @returns {Promise}
+     */
+    iOSDisconnectNetwork: function (ssid) {
         return new Promise(function (resolve, reject) {
 
             cordova.exec(resolve, reject, "WifiWizard2", "iOSDisconnectNetwork", [
@@ -121,8 +122,21 @@ var WifiWizard2 = {
                     return false;
                 }
 
-                networkInformation.push(!!wifi.isHiddenSSID)
-                cordova.exec(resolve, reject, "WifiWizard2", "add", networkInformation);
+                networkInformation.push(!!wifi.isHiddenSSID);
+                let resolved = false;
+                const errorHandler = (reason) => {
+                    if (resolved && WifiWizard2.networkLost) {
+                        WifiWizard2.networkLost(reason);
+                    } else if (!resolved) {
+                        reject(reason);
+                    } else {
+                        console.log('WifiWizard2 netowrk lost but no one cares.');
+                    }
+                };
+                cordova.exec((res) => {
+                    resolved = true;
+                    resolve(res);
+                }, errorHandler, "WifiWizard2", "add", networkInformation);
 
             } else {
                 reject("Invalid parameter. Wifi not an object.");
@@ -170,10 +184,10 @@ var WifiWizard2 = {
             }
 
             WifiWizard2.add(wifiConfig).then(function (newNetID) {
-                 if(device.platform === "Android" && parseInt(device.version.split('.')[0]) >= 10){
-                     // New method for Android Q does not support it add method already brings up dialog to join network
-                     resolve(true);
-                     return true;
+                if (device.platform === "Android" && parseInt(device.version.split('.')[0]) >= 10) {
+                    // New method for Android Q does not support it add method already brings up dialog to join network
+                    resolve(true);
+                    return true;
                 } else {
                     // Successfully updated or added wifiConfig
                     cordova.exec(resolve, reject, "WifiWizard2", "connect", [WifiWizard2.formatWifiString(SSID), bindAll]);
@@ -358,25 +372,25 @@ var WifiWizard2 = {
     },
 
     /**
-	 * Unbind Network
-	 * @returns {Promise<any>}
-	 */
-	resetBindAll: function () {
-		return new Promise( function( resolve, reject ){
-			cordova.exec(resolve, reject, "WifiWizard2", "resetBindAll", []);
-		});
-	},
-
-	/**
-	 * Bind Network
-	 * @returns {Promise<any>}
-	 */
-	setBindAll: function () {
-		return new Promise( function( resolve, reject ){
-			cordova.exec(resolve, reject, "WifiWizard2", "setBindAll", []);
-		});
+     * Unbind Network
+     * @returns {Promise<any>}
+     */
+    resetBindAll: function () {
+        return new Promise(function (resolve, reject) {
+            cordova.exec(resolve, reject, "WifiWizard2", "resetBindAll", []);
+        });
     },
-    
+
+    /**
+     * Bind Network
+     * @returns {Promise<any>}
+     */
+    setBindAll: function () {
+        return new Promise(function (resolve, reject) {
+            cordova.exec(resolve, reject, "WifiWizard2", "setBindAll", []);
+        });
+    },
+
     /**
      * Get Wifi Router IP from DHCP
      * @returns {Promise<any>}
@@ -631,9 +645,9 @@ var WifiWizard2 = {
         }
         ssid = ssid.trim();
 
-        if(device.platform === "Android" && parseInt(device.version.split('.')[0]) >= 10){
+        if (device.platform === "Android" && parseInt(device.version.split('.')[0]) >= 10) {
             // Do not add "" To the SSID, as the new method for Android Q does not support it
-        } 
+        }
         else {
             if (ssid.charAt(0) != '"') {
                 ssid = '"' + ssid;
