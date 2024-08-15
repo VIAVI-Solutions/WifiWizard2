@@ -6,16 +6,31 @@
 #include <sys/socket.h>
 #include <netinet/in.h> 
 
+@interface WifiWizard2()
+{
+    NSArray* m_lastIfs;
+    NSArray* m_lastSsid;
+}
+
+@end
+
 @implementation WifiWizard2
 
 - (id)fetchSSIDInfo {
     // see http://stackoverflow.com/a/5198968/907720
     NSArray *ifs = (__bridge_transfer NSArray *)CNCopySupportedInterfaces();
-    NSLog(@"Supported interfaces: %@", ifs);
+    if(![m_lastIfs isEqual:ifs]) {
+        m_lastIfs = ifs;
+        NSLog(@"Supported interfaces: %@", ifs);
+    }
     NSDictionary *info;
     for (NSString *ifnam in ifs) {
         info = (__bridge_transfer NSDictionary *)CNCopyCurrentNetworkInfo((__bridge CFStringRef)ifnam);
-        NSLog(@"%@ => %@", ifnam, info);
+        NSString* ssid = [info objectForKey:kCNNetworkInfoKeySSID];
+        if(![m_lastSsid isEqual:ssid]) {
+            m_lastSsid = ssid;
+            NSLog(@"%@ => %@", ifnam, info);
+        }
         if (info && [info count]) { break; }
     }
     return info;
@@ -61,21 +76,22 @@
 			configuration.joinOnce = false;
             
             [[NEHotspotConfigurationManager sharedManager] applyConfiguration:configuration completionHandler:^(NSError * _Nullable error) {
-                
-                NSDictionary *r = [self fetchSSIDInfo];
-                
-                NSString *ssid = [r objectForKey:(id)kCNNetworkInfoKeySSID]; //@"SSID"
-                
-                if ([ssid isEqualToString:ssidString]){
-                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:ssidString];
-                } else if (error.description) {
-                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error.description];
-                } else {
-                    // Looks like if error isn't given, and ssid does not equal requested SSID, it means it failed to join the network
-                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Unknown, but did not connect"];			
-		}
-                [self.commandDelegate sendPluginResult:pluginResult
-                                            callbackId:command.callbackId];
+
+                // Apple recommends this fetchCurrentWithCompletionHandler: over CNCopyCurrentNetworkInfo()
+                // Really, a reliable person on the internet says CNCopyCurrentNetworkInfo() is deprecated, but I can't find any
+                // evidence of that. Seems to work the same, though, so I'll just use the definitely-not-deprecated call here.
+                [NEHotspotNetwork fetchCurrentWithCompletionHandler:^(NEHotspotNetwork *currentNetwork) {
+                    if([currentNetwork.SSID isEqualToString:ssidString]) {
+                        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:ssidString];
+                    } else if (error.description) {
+                        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error.description];
+                    } else {
+                        // Looks like if error isn't given, and ssid does not equal requested SSID, it means it failed to join the network
+                        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Unknown, but did not connect"];
+                    }
+                    [self.commandDelegate sendPluginResult:pluginResult
+                                                callbackId:command.callbackId];
+                }];
             }];
 
 
