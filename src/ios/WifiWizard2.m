@@ -394,6 +394,7 @@ static NSArray<NSData *> * addressesOfDiscardServiceOnBroadcastCapableInterfaces
     return result;
 }
 - (BOOL)  triggerLocalNetworkPrivacyAlertObjC {
+    BOOL ret = NO;
     int sock4 = socket(AF_INET, SOCK_DGRAM, 0);
     int sock6 = socket(AF_INET, SOCK_DGRAM, 0);
     
@@ -403,8 +404,10 @@ static NSArray<NSData *> * addressesOfDiscardServiceOnBroadcastCapableInterfaces
         for (NSData * address in addresses) {
             int sock = ((const struct sockaddr *) address.bytes)->sa_family == AF_INET ? sock4 : sock6;
             (void) sendto(sock, &message, sizeof(message), MSG_DONTWAIT, address.bytes, (socklen_t) address.length);
+            ret = YES;
         }
     }
+    return ret;
 }
 
 
