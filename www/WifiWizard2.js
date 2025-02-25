@@ -184,14 +184,8 @@ var WifiWizard2 = {
             }
 
             WifiWizard2.add(wifiConfig).then(function (newNetID) {
-                if (device.platform === "Android" && parseInt(device.version.split('.')[0]) >= 10) {
-                    // New method for Android Q does not support it add method already brings up dialog to join network
-                    resolve(true);
-                    return true;
-                } else {
-                    // Successfully updated or added wifiConfig
-                    cordova.exec(resolve, reject, "WifiWizard2", "connect", [WifiWizard2.formatWifiString(SSID), bindAll]);
-                }
+                // Successfully updated or added wifiConfig
+                cordova.exec(resolve, reject, "WifiWizard2", "connect", [WifiWizard2.formatWifiString(SSID), bindAll]);
                 // Catch error adding/updating network
             }).catch(function (error) {
 
@@ -644,19 +638,6 @@ var WifiWizard2 = {
             ssid = "";
         }
         ssid = ssid.trim();
-
-        if (device.platform === "Android" && parseInt(device.version.split('.')[0]) >= 10) {
-            // Do not add "" To the SSID, as the new method for Android Q does not support it
-        }
-        else {
-            if (ssid.charAt(0) != '"') {
-                ssid = '"' + ssid;
-            }
-
-            if (ssid.charAt(ssid.length - 1) != '"') {
-                ssid = ssid + '"';
-            }
-        }
 
         return ssid;
     },
