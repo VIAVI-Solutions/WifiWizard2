@@ -14,12 +14,8 @@
  */
 package wifiwizard2;
 
-import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
@@ -38,7 +34,6 @@ import android.net.wifi.WifiManager;
 import android.net.wifi.WifiNetworkSpecifier;
 import android.os.AsyncTask;
 import android.os.Build.VERSION;
-import android.provider.Settings;
 import android.util.Log;
 
 import org.apache.cordova.CallbackContext;
@@ -383,8 +378,17 @@ public class WifiWizard2 extends CordovaPlugin {
       // 2: authentication information
       // 3: whether or not the SSID is hidden
       String newSSID = data.getString(0);
+      newSSID = addQuotesToString(newSSID);
       String authType = data.getString(1);
       String newPass = data.getString(2);
+      // So the JS code requires "WPA" to properly pass an empty password for no-auth
+      // on modern Android, otherwise it sets the password to "NONE", which does not work...
+      // Rather than adding more conditionals in the confusing JS code, just check here for
+      // an empty password and switch the authType for older Android
+      if(newPass.length() == 0) {
+        authType = "NONE";
+      }
+      newPass = addQuotesToString(newPass);
       boolean isHiddenSSID = data.getBoolean(3);
 
       wifi.hiddenSSID = isHiddenSSID;
@@ -622,7 +626,7 @@ public class WifiWizard2 extends CordovaPlugin {
       Log.d(TAG, e.getMessage());
       return;
     }
-
+    ssidToEnable = addQuotesToString(ssidToEnable);
     int networkIdToEnable = ssidToNetworkId(ssidToEnable);
 
     try {
@@ -689,7 +693,7 @@ public class WifiWizard2 extends CordovaPlugin {
       Log.d(TAG, e.getMessage());
       return false;
     }
-
+    ssidToDisable = addQuotesToString(ssidToDisable);
     int networkIdToDisconnect = ssidToNetworkId(ssidToDisable);
 
     try {
@@ -737,6 +741,7 @@ public class WifiWizard2 extends CordovaPlugin {
     try {
       String ssidToDisconnect = data.getString(0);
 
+      ssidToDisconnect = addQuotesToString(ssidToDisconnect);
       int networkIdToRemove = ssidToNetworkId(ssidToDisconnect);
 
       if (networkIdToRemove > -1) {
@@ -777,6 +782,11 @@ public class WifiWizard2 extends CordovaPlugin {
   private void connect(CallbackContext callbackContext, JSONArray data) {
     Log.d(TAG, "WifiWizard2: connect entered.");
 
+    if(API_VERSION >= 29) {
+      // New method for Android Q does not support it add method already brings up dialog to join network
+      callbackContext.success();
+    }
+
     if (!validateData(data)) {
       callbackContext.error("CONNECT_INVALID_DATA");
       Log.d(TAG, "WifiWizard2: connect invalid data.");
@@ -795,6 +805,7 @@ public class WifiWizard2 extends CordovaPlugin {
       return;
     }
 
+    ssidToConnect = addQuotesToString(ssidToConnect);
     int networkIdToConnect = ssidToNetworkId(ssidToConnect);
 
     if (networkIdToConnect > -1) {
@@ -1208,6 +1219,7 @@ public class WifiWizard2 extends CordovaPlugin {
       return false;
     }
 
+    ssidToGetNetworkID = addQuotesToString(ssidToGetNetworkID);
     int networkIdToConnect = ssidToNetworkId(ssidToGetNetworkID);
     callbackContext.success(networkIdToConnect);
 
@@ -1954,6 +1966,22 @@ public class WifiWizard2 extends CordovaPlugin {
     }
   }
 
+  private String addQuotesToString(String wifiString) {
+    // Before API 29, aka 10, aka Android Q, a lot of strings required quotes. The plugin
+    // previously handled this in Javascript with an implicit device dependency in formatWifiString.
+    // Now it is handled here
+    String ret = wifiString;
+    if (API_VERSION < 29) {
+      if (!wifiString.startsWith("\"")) {
+        ret = '"' + wifiString;
+      }
+
+      if (!wifiString.endsWith("\"")) {
+        ret = ret + '"';
+      }
+    }
+    return ret;
+  }
   /**
    * Class to store finished boolean in
    */
