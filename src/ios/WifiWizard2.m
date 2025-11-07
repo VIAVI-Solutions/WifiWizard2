@@ -128,17 +128,16 @@
 
             [[NEHotspotConfigurationManager sharedManager] applyConfiguration:configuration completionHandler:^(NSError * _Nullable error) {
 
-                NSDictionary *r = [self fetchSSIDInfo];
-
-                NSString *ssid = [r objectForKey:(id)kCNNetworkInfoKeySSID]; //@"SSID"
-
-                if ([ssid isEqualToString:ssidString]){
-                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:ssidString];
-                }else{
-                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error.description];
-                }
-                [self.commandDelegate sendPluginResult:pluginResult
-                                            callbackId:command.callbackId];
+                [NEHotspotNetwork fetchCurrentWithCompletionHandler:^(NEHotspotNetwork *currentNetwork) {
+                    if([currentNetwork.SSID isEqualToString:ssidString]) {
+                        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:ssidString];
+                    } else if (error.description) {
+                        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error.description];
+                    } else {
+                        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Unknown, but did not connect"];
+                    }
+                    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+                }];
             }];
 
 
